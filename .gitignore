@@ -1,0 +1,51 @@
+# Flutter 관련 빌드 결과물
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.idea/
+.vscode/
+*.iml
+
+# iOS 관련
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Pods/
+ios/Runner.xcworkspace/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.podspec
+
+# Android 관련
+.android/
+app/build/
+local.properties
+
+# 기타
+*.lock
+*.log
+*.lockfile
+
+# Dart
+.dart_tool/
+.packages
+pubspec.lock
+
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Firebase (만약 사용 시)
+firebase_app_id_file.json
+
+# 기타 민감정보 (API 키 등) 저장하지 말 것!
