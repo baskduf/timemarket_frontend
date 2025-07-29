@@ -5,11 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String baseUrl = 'http://localhost:8000/api'; // 실제 서버 주소로 수정
 
 class AuthService {
-  Future<bool> login(String username, String password) async {
+  Future<bool> login(String username, String email, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login/'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'nickname': username, 'password': password}),
+      body: jsonEncode({'nickname': username, 'email': email, 'password': password}),
     );
 
     if (response.statusCode == 200) {
