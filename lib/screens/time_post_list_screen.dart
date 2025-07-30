@@ -100,9 +100,7 @@ class _TimePostListScreenState extends State<TimePostListScreen> {
         itemBuilder: (context, index) {
           final post = _posts![index];
           final postObj = Post.fromJson(post); // Map → Post 변환
-          return ListTile(
-            title: Text(post['title'] ?? '제목 없음'),
-            subtitle: Text(post['description'] ?? ''),
+          return InkWell(
             onTap: () {
               Navigator.push(
                 context,
@@ -111,49 +109,96 @@ class _TimePostListScreenState extends State<TimePostListScreen> {
                 ),
               );
             },
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.edit),
-                  onPressed: () async {
-                    final updated = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EditPostScreen(postId: post['id'], initialData: post),
+            child: Container(
+              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 프로필 이미지 or 기본 아이콘
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundImage: postObj.author.profileImageUrl != null
+                        ? NetworkImage(postObj.author.profileImageUrl!)
+                        : null,
+                    child: postObj.author.profileImageUrl == null
+                        ? Icon(Icons.person, size: 28, color: Colors.grey)
+                        : null,
+                  ),
+
+                  SizedBox(width: 12),
+
+                  // 작성자 이름 + 글 제목
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          postObj.author.username, // 작성자 이름
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          postObj.title, // 글 제목
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 편집/삭제 버튼
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit),
+                        onPressed: () async {
+                          final updated = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditPostScreen(postId: postObj.id, initialData: post),
+                            ),
+                          );
+                          if (updated == true) _loadPosts();
+                        },
                       ),
-                    );
-                    if (updated == true) _loadPosts();
-                  },
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete),
-                  onPressed: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: Text('삭제 확인'),
-                        content: Text('정말 삭제하시겠습니까?'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('취소')),
-                          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('삭제')),
-                        ],
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: Text('삭제 확인'),
+                              content: Text('정말 삭제하시겠습니까?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(context, false), child: Text('취소')),
+                                TextButton(onPressed: () => Navigator.pop(context, true), child: Text('삭제')),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) {
+                            final success = await _timePostService.deletePost(postObj.id);
+                            if (success) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 완료')));
+                              _loadPosts();
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 실패')));
+                            }
+                          }
+                        },
                       ),
-                    );
-                    if (confirmed == true) {
-                      final success = await _timePostService.deletePost(post['id']);
-                      if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 완료')));
-                        _loadPosts();
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 실패')));
-                      }
-                    }
-                  },
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           );
+
         },
       ),
     );
