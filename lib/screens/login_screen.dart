@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'signup_screen.dart';
 import 'login_screen.dart'; // LoginScreen 경로 맞게 import 꼭 해주세요
+import '../screens/time_post_map_screen.dart';
 import 'time_post_list_screen.dart'; // 새로 만든 화면 import
 
 class LoginScreen extends StatelessWidget {
@@ -28,7 +29,7 @@ class LoginScreen extends StatelessWidget {
                   // 로그인 성공 시 TimePostListScreen 으로 이동
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (_) => TimePostListScreen()),
+                    MaterialPageRoute(builder: (_) => TimePostMapScreen()),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("로그인 실패")));

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:timemarket_frontend/screens/login_screen.dart';
+import 'package:timemarket_frontend/screens/time_post_map_screen.dart';
 import '../services/time_post_service.dart';
 import '../services/auth_service.dart';  // 추가
 import 'create_post_screen.dart';
@@ -40,6 +41,16 @@ class _TimePostListScreenState extends State<TimePostListScreen> {
 
   List<Widget> _buildActions() {
     return [
+      IconButton(
+        icon: Icon(Icons.map),
+        tooltip: '지도',
+        onPressed: () async {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => TimePostMapScreen()),
+          );
+        },
+      ),
       IconButton(
         icon: Icon(Icons.add),
         tooltip: '게시물 작성',

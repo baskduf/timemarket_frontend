@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/time_post_list_screen.dart';
+import 'screens/time_post_map_screen.dart';
 import 'services/auth_service.dart';
 
 void main() {
@@ -22,7 +23,7 @@ class MyApp extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting)
             return Center(child: CircularProgressIndicator());
           if (snapshot.data != null)
-            return TimePostListScreen();
+            return LoginScreen();
           else
             return LoginScreen();
         },
