@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart'; // LatLng 사용을 위해 임포트
+import 'package:provider/provider.dart';
 import '../services/time_post_service.dart';
+import '../providers/post_provider.dart';
 import 'map_picker_screen.dart'; // 방금 만든 화면 임포트
 
 class CreatePostScreen extends StatefulWidget {
@@ -80,10 +82,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     });
 
     if (success && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('게시글이 성공적으로 등록되었습니다.')));
-      Navigator.pop(context, true);
+      // Provider를 통해 전역 상태 업데이트 - 모든 화면에 자동 반영
+      final postProvider = Provider.of<PostProvider>(context, listen: false);
+      await postProvider.onPostCreated();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('게시글이 성공적으로 등록되었습니다.')));
+        Navigator.pop(context, true);
+      }
     } else if (mounted) {
       ScaffoldMessenger.of(
         context,

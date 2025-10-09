@@ -3,9 +3,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../services/time_post_service.dart';
+import 'package:provider/provider.dart';
 import '../models/post_model.dart';
-import 'create_post_screen.dart';
+import '../providers/post_provider.dart';
 import 'post_detail_screen.dart';
 
 class TimePostMapScreen extends StatefulWidget {
@@ -16,11 +16,6 @@ class TimePostMapScreen extends StatefulWidget {
 }
 
 class _TimePostMapScreenState extends State<TimePostMapScreen> {
-  final TimePostService _postService = TimePostService();
-  List<dynamic> _posts = [];
-  bool _loading = true;
-  final String _postType = 'sale';
-
   final Completer<GoogleMapController> _controller =
       Completer<GoogleMapController>();
 
@@ -32,59 +27,26 @@ class _TimePostMapScreenState extends State<TimePostMapScreen> {
   @override
   void initState() {
     super.initState();
-    // 위젯이 완전히 빌드된 후에 데이터 로드
+    // Provider의 위치를 업데이트하고 데이터 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _loadNearbyPosts();
+        final postProvider = Provider.of<PostProvider>(context, listen: false);
+        postProvider.updateLocation(
+          _initialCamera.target.latitude,
+          _initialCamera.target.longitude,
+        );
       }
     });
   }
 
-  Future<void> _loadNearbyPosts() async {
-    // 서버 통신 중에는 로딩 상태로 표시
-    if (!_loading) {
-      setState(() {
-        _loading = true;
-      });
-    }
-    
-    final posts = await _postService.fetchNearbyPosts(
-      lat: _initialCamera.target.latitude,
-      lng: _initialCamera.target.longitude,
-      type: _postType,
-    );
-    if (mounted) {
-      setState(() {
-        _posts = posts ?? [];
-        _loading = false;
-      });
-    }
-  }
-
-  // ✅ 1. 글 작성 화면으로 이동하고, 돌아왔을 때 새로고침하는 함수
-  Future<void> _navigateAndRefresh() async {
-    // CreatePostScreen으로 이동하고, 결과가 돌아올 때까지 기다립니다.
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CreatePostScreen()),
-    );
-
-    // 만약 CreatePostScreen에서 true를 반환했다면 (성공적으로 글을 작성했다면)
-    if (result == true && mounted) {
-      // 게시물 데이터를 다시 불러옵니다.
-      _loadNearbyPosts();
-    }
-  }
-
-  Set<Marker> _buildMarkers() {
+  Set<Marker> _buildMarkers(List<dynamic> posts) {
     final Set<Marker> markers = {};
 
-    for (final post in _posts) {
+    for (final post in posts) {
       try {
         final lat = (post['latitude'] as num).toDouble();
         final lng = (post['longitude'] as num).toDouble();
         final title = post['title'] as String? ?? '제목 없음';
-        final description = post['description'] as String? ?? '';
         final price = post['price'] as int? ?? 0;
         final type = post['type'] as String? ?? 'sale';
         final String markerId = post['id']?.toString() ?? 'marker_${markers.length}';
@@ -108,12 +70,12 @@ class _TimePostMapScreenState extends State<TimePostMapScreen> {
             infoWindow: InfoWindow(
               title: title,
               snippet: '${type == 'sale' ? '판매' : '구인'} • ${price}TC • $authorName',
+              onTap: () {
+                // InfoWindow 클릭 시 게시글 상세 페이지로 이동
+                print('InfoWindow 클릭됨: $title (ID: $markerId)');
+                _navigateToPostDetail(post);
+              },
             ),
-            onTap: () {
-              print('마커 클릭됨: $title (ID: $markerId)');
-              // 마커 클릭 시 게시글 상세 페이지로 이동
-              _navigateToPostDetail(post);
-            },
           ),
         );
       } catch (e) {
@@ -154,72 +116,76 @@ class _TimePostMapScreenState extends State<TimePostMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6F00)),
+    return Consumer<PostProvider>(
+      builder: (context, postProvider, child) {
+        if (postProvider.loading) {
+          return const Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6F00)),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    '지도를 불러오는 중...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: 16),
-              Text(
-                '지도를 불러오는 중...',
-                style: TextStyle(
-                  fontSize: 16,
+            ),
+          );
+        }
+
+        try {
+          return GoogleMap(
+            initialCameraPosition: _initialCamera,
+            onMapCreated: (GoogleMapController controller) {
+              _controller.complete(controller);
+            },
+            markers: _buildMarkers(postProvider.posts),
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+            zoomControlsEnabled: true,
+            mapToolbarEnabled: false,
+            compassEnabled: true,
+          );
+        } catch (e) {
+          print('Google Maps 로딩 오류: $e');
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.map_outlined,
+                  size: 64,
                   color: Colors.grey,
                 ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    try {
-      return GoogleMap(
-        initialCameraPosition: _initialCamera,
-        onMapCreated: (GoogleMapController controller) {
-          _controller.complete(controller);
-        },
-        markers: _buildMarkers(),
-        myLocationEnabled: true,
-        myLocationButtonEnabled: true,
-        zoomControlsEnabled: true,
-        mapToolbarEnabled: false,
-        compassEnabled: true,
-      );
-    } catch (e) {
-      print('Google Maps 로딩 오류: $e');
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.map_outlined,
-              size: 64,
-              color: Colors.grey,
+                SizedBox(height: 16),
+                Text(
+                  '지도를 불러올 수 없습니다',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '페이지를 새로고침해주세요',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 16),
-            Text(
-              '지도를 불러올 수 없습니다',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              '페이지를 새로고침해주세요',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+          );
+        }
+      },
+    );
   }
 }
