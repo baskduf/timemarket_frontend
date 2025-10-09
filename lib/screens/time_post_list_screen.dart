@@ -70,6 +70,7 @@ class _TimePostListScreenState extends State<TimePostListScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
+        automaticallyImplyLeading: false,
         title: const Text(
           '시간 거래',
           style: TextStyle(
@@ -77,10 +78,6 @@ class _TimePostListScreenState extends State<TimePostListScreen> {
             color: Colors.black87,
             fontSize: 18,
           ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black54),
-          onPressed: () => Navigator.pop(context),
         ),
         actions: [
           Container(
