@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 
 class MapPickerScreen extends StatefulWidget {
   const MapPickerScreen({super.key});
@@ -22,6 +24,16 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
   LatLng? _selectedPosition;
   final Set<Marker> _markers = {};
+  
+  // 구글맵 컨트롤러와 현재 위치 관리
+  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
+  Position? _currentPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    // initState에서는 호출하지 않음 (지도 로드 후 자동 이동)
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,10 +97,22 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: _initialPosition,
-            myLocationButtonEnabled: true,
+            myLocationButtonEnabled: false, // 커스텀 버튼 사용
             myLocationEnabled: true,
-            zoomControlsEnabled: true,
+            zoomControlsEnabled: false, // 기본 줌 컨트롤 비활성화
             mapToolbarEnabled: false,
+            padding: const EdgeInsets.only(bottom: 100, right: 16), // 버튼이 보이도록 패딩 추가
+            onMapCreated: (GoogleMapController controller) {
+              if (!_controller.isCompleted) {
+                _controller.complete(controller);
+                // 지도 로드 완료 후 현재 위치로 이동
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (mounted) {
+                    _moveToCurrentLocation();
+                  }
+                });
+              }
+            },
             // 지도를 탭했을 때 호출되는 콜백
             onTap: (LatLng position) {
               HapticFeedback.selectionClick();
@@ -115,9 +139,139 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             right: 16,
             child: _buildInfoCard(),
           ),
+          // 현재 위치로 이동 버튼
+          Positioned(
+            bottom: 90, // 더 위로 올림
+            right: 16,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 현재 위치 버튼
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _moveToCurrentLocation();
+                      },
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: carrotOrange,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.my_location,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  /// 현재 위치로 카메라 이동
+  Future<void> _moveToCurrentLocation() async {
+    try {
+      // 위치 서비스 사용 가능 여부 확인
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('위치 서비스가 비활성화되어 있습니다. 위치를 활성화해주세요.'),
+              backgroundColor: carrotOrange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // 위치 권한 확인
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('위치 권한이 거부되었습니다. 앱 설정에서 권한을 허용해주세요.'),
+                backgroundColor: carrotOrange,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('위치 권한이 영구적으로 거부되었습니다. 설정에서 권한을 변경하세요.'),
+              backgroundColor: carrotOrange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      // 캐시된 위치가 있으면 우선 사용, 없으면 새로 가져오기
+      Position? pos = _currentPosition;
+      if (pos == null) {
+        pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+        _currentPosition = pos;
+      }
+
+      if (!mounted) return;
+
+      // 카메라를 현재 위치로 이동
+      final controller = await _controller.future;
+      final target = LatLng(pos.latitude, pos.longitude);
+      await controller.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: target, zoom: 16.0),
+        ),
+      );
+
+      // 햅틱 피드백
+      HapticFeedback.mediumImpact();
+      
+    } catch (e) {
+      print('현재 위치로 이동 실패: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('현재 위치로 이동하는 데 실패했습니다.'),
+            backgroundColor: carrotOrange,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildInfoCard() {
