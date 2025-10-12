@@ -81,6 +81,14 @@ class _ChatScreenState extends State<ChatScreen> {
       // 메시지 히스토리 로드
       final messageHistory = await _chatService.getMessages(widget.roomId);
       if (messageHistory != null && messageHistory.isNotEmpty) {
+        // 디버깅: 히스토리에서 불러온 첫 메시지 구조 확인
+        if (messageHistory.isNotEmpty) {
+          print('📜 [메시지 히스토리] 첫 번째 메시지:');
+          print('   - 전체 데이터: ${messageHistory[0]}');
+          print('   - sender: ${messageHistory[0]['sender']}');
+          print('   - sender profile_image: ${messageHistory[0]['sender']?['profile_image']}');
+        }
+        
         setState(() {
           _messages = List<Map<String, dynamic>>.from(messageHistory);
         });
@@ -151,6 +159,12 @@ class _ChatScreenState extends State<ChatScreen> {
           
           // 메시지 타입 확인
           if (messageData['type'] == 'chat_message' && messageData['data'] != null) {
+            // 디버깅: 웹소켓으로 받은 메시지 데이터 구조 확인
+            print('💬 [WebSocket] 받은 메시지 데이터:');
+            print('   - 전체 데이터: ${messageData['data']}');
+            print('   - sender: ${messageData['data']['sender']}');
+            print('   - sender profile_image: ${messageData['data']['sender']?['profile_image']}');
+            
             // 일반 채팅 메시지 처리
             bool isDuplicate = _messages.any((m) => 
               m['id'] != null && messageData['data']['id'] != null && 
@@ -461,6 +475,14 @@ class _ChatScreenState extends State<ChatScreen> {
         final isMe = message['sender'] != null && message['sender']['id'] == widget.currentUserId;
         final timestamp = item['timestamp'] as DateTime;
         final profileImageUrl = message['sender']?['profile_image'] as String?;
+        
+        // 디버깅: 메시지 렌더링 시 프로필 이미지 URL 확인
+        if (index % 20 == 0) { // 20개마다 한 번씩만 로그 출력
+          print('🎨 [메시지 렌더링] 인덱스 $index:');
+          print('   - sender: ${message['sender']}');
+          print('   - profile_image: $profileImageUrl');
+          print('   - isMe: $isMe');
+        }
         
         return _buildMessageBubble(
           isMe,

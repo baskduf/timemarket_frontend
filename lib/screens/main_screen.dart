@@ -33,6 +33,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   Key _mapScreenKey = UniqueKey();
   Key _listScreenKey = UniqueKey();
   Key _chatScreenKey = UniqueKey();
+  Key _profileScreenKey = UniqueKey();
 
   @override
   void initState() {
@@ -45,7 +46,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       TimePostMapScreen(key: _mapScreenKey),
       TimePostListScreen(key: _listScreenKey),
       ChatListScreen(key: _chatScreenKey),
-      ProfileScreen(),
+      ProfileScreen(key: _profileScreenKey),
     ];
   }
 
@@ -427,6 +428,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 case 2: // 채팅
                   _chatScreenKey = UniqueKey();
                   break;
+                case 3: // 마이페이지
+                  _profileScreenKey = UniqueKey();
+                  break;
               }
             });
           } else {
@@ -443,6 +447,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   break;
                 case 2: // 채팅
                   _chatScreenKey = UniqueKey();
+                  break;
+                case 3: // 마이페이지
+                  _profileScreenKey = UniqueKey();
                   break;
               }
             });
